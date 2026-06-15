@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Drafts not for publishing (filename contains .draft.)
+*.draft.md
+*.draft.png
+
+# Local notes
+NOTES.md
+notes/
+scratch/
