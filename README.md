@@ -2,9 +2,6 @@
 
 Field writeups on real-world threat encounters and the disclosure pipeline.
 
-> [!NOTE]
-> **Repository under active development.** Case studies in this repo are written and refined incrementally. Items marked as drafts are not yet final.
-
 ## Case Studies
 
 | Date | Title | Status |
