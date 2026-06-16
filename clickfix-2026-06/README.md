@@ -1,4 +1,4 @@
- # Looking for a Dog Groomer, I Found a Live Infostealer Campaign
+# Looking for a Dog Groomer, I Found a Live Infostealer Campaign
 
 *A case study in cloaked ClickFix and the structural failure of automated abuse reporting.*
 
@@ -12,19 +12,19 @@ While searching for a mobile dog groomer on a Friday evening, I clicked a normal
 
 ## Background: What Is ClickFix?
 
-ClickFix is a social engineering technique that tricks users into executing malicious code on their own machines. Instead of exploiting a software vulnerability, it exploits trust: the attacker presents a fake verification dialog (typically impersonating Cloudflare, Google reCAPTCHA, or a browser update prompt) and instructs the visitor to open a terminal, paste a "verification code," and press Enter. What the visitor doesn't realize is that the page has already silently written a malicious PowerShell command to their clipboard using JavaScript. Executing it downloads and runs an infostealer or remote access trojan with whatever privileges the terminal session has.
+ClickFix is a social engineering attack that tricks people into installing malware on their own machines. There's no software exploit involved. Instead, the attacker shows a fake verification screen, something that looks like a Cloudflare bot check, a Google reCAPTCHA, or a browser update, and gives the visitor step-by-step instructions to open a terminal, paste a "verification code," and press Enter. What the visitor doesn't realize is that the page has already silently copied a malicious command to their clipboard. Running it downloads and installs an infostealer or remote access trojan.
 
-The technique was first documented by Proofpoint in early March 2024, attributed to the initial access broker TA571 and the ClearFake compromise cluster. It spread rapidly. By mid-2025, Microsoft Threat Intelligence reported ClickFix as the initial access method in 47% of tracked intrusions, and attacks surged 517% in the first half of 2025. Nation-state actors including APT28 (Russia), TA450 (Iran), and TA457 (North Korea) adopted it alongside the original cybercriminal operators.
+The technique was first documented by Proofpoint in March 2024 and spread rapidly through the rest of that year and into 2025. What started as a cybercrime tool was eventually adopted by state-sponsored hacking groups as well, including groups linked to Russia, Iran, and North Korea. Microsoft described ClickFix as one of the most common initial access methods they tracked through 2025, and the volume of attacks grew significantly through the first half of that year.
 
-The payloads are varied and severe. Lumma Stealer is the most common, responsible for roughly 51% of observed infections according to Microsoft. Other documented payloads include StealC, Vidar, DarkGate, AsyncRAT, NetSupport RAT, Latrodectus, and Atomic Stealer (macOS). The technique is payload-agnostic: the same social engineering chain can deliver any of them.
+The malware delivered through ClickFix varies, but infostealers are the most common. These are programs designed to harvest saved passwords, browser cookies, session tokens, autofill data, and anything else of value from the infected machine. Lumma Stealer is the most frequently observed payload, but others like StealC, Vidar, and NetSupport RAT have been documented as well.
 
-A common delivery vector is compromised WordPress sites. Attackers inject malicious JavaScript into theme files or vulnerable plugins. The injected script is cloaked: it checks the visitor's referrer, user-agent, IP geolocation, and session state before deciding whether to display the attack overlay or serve the legitimate page. Visitors arriving from search engines on residential IPs with real browsers see the attack. Automated scanners, security crawlers, and repeat visitors see the clean site.
+One of the primary delivery vectors is compromised WordPress sites. Attackers inject malicious code into theme files or outdated plugins. The injected code is cloaked: it checks who is visiting the site and only shows the attack to people who look like real, first-time visitors arriving from a search engine. Automated scanners, security crawlers, and repeat visitors see the normal, clean version of the site.
 
 **Sources:**
-- [Proofpoint: "Clipboard to Compromise: PowerShell Script Self-Pwn" (June 2024)](https://www.proofpoint.com/us/blog/threat-insight/clipboard-compromise-powershell-self-pwn) — original TA571/ClearFake documentation
-- [Proofpoint: "Around the World in 90 Days: State-Sponsored Actors Try ClickFix" (August 2025)](https://www.proofpoint.com/us/blog/threat-insight/around-world-90-days-state-sponsored-actors-try-clickfix) — nation-state adoption
-- [Microsoft Security Blog: "Think before you Click(Fix)" (2025, updated 2026)](https://www.microsoft.com/en-us/security/blog/2025/08/21/think-before-you-clickfix-analyzing-the-clickfix-social-engineering-technique/) — enterprise-scale telemetry and Lumma Stealer prevalence
-- [Sekoia: "ClickFix tactic: The Phantom Meet" (March 2025)](https://blog.sekoia.io/clickfix-tactic-the-phantom-meet/) — ClearFake/ClickFix infrastructure analysis
+- [Proofpoint: "Clipboard to Compromise: PowerShell Script Self-Pwn" (June 2024)](https://www.proofpoint.com/us/blog/threat-insight/clipboard-compromise-powershell-self-pwn)
+- [Proofpoint: "Around the World in 90 Days: State-Sponsored Actors Try ClickFix" (August 2025)](https://www.proofpoint.com/us/blog/threat-insight/around-world-90-days-state-sponsored-actors-try-clickfix)
+- [Microsoft Security Blog: "Think before you Click(Fix)" (2025)](https://www.microsoft.com/en-us/security/blog/2025/08/21/think-before-you-clickfix-analyzing-the-clickfix-social-engineering-technique/)
+- [Sekoia: "ClickFix tactic: The Phantom Meet" (March 2025)](https://blog.sekoia.io/clickfix-tactic-the-phantom-meet/)
 
 ---
 
@@ -113,16 +113,16 @@ Every reporting channel depends on the platform's own systems reproducing the ma
 
 ## The Cloaking Mechanism
 
-The brief flash of the legitimate site before the overlay appears tells you how the injection works. The malicious script isn't blocking the initial page render. It loads asynchronously, fires after the DOM is ready (likely on `DOMContentLoaded` or a short `setTimeout`), and then injects a full-screen element with a high `z-index` on top of the real WordPress page. The legitimate site renders first; the overlay drops on top of it a moment later.
+The brief flash of the legitimate site before the overlay appears tells you how the injection works. The malicious code isn't replacing the real page. It's loading alongside it, waiting for the page to finish rendering, and then dropping a full-screen element on top of everything. The real site is still underneath. The overlay just covers it completely.
 
-Before displaying the overlay, the injected JavaScript checks the visitor's profile against a set of conditions. Based on documented ClickFix campaigns and observed behavior, these likely include:
+Before displaying the overlay, the injected code checks who's visiting. Based on documented ClickFix campaigns and the behavior I observed, these checks likely include:
 
-- **Referrer:** Does the visitor arrive from a search engine (Google, Bing)? Visitors with no referrer or from direct navigation may be filtered out.
-- **User-Agent:** Is the visitor using a real browser? Known bot user-agents, headless browsers, and crawler signatures are served the clean page.
-- **IP geolocation:** Is the visitor on a residential IP in a targeted geography? Data-center IPs and VPN exit nodes may be excluded.
-- **Session state:** Has the visitor been seen before? Repeat visits and existing cookies may suppress the overlay, which is why the site owner may visit their own site and see nothing wrong.
+- **Where the visitor came from:** Did they arrive from a search engine like Google or Bing? Visitors who type the URL directly or arrive with no referrer may be filtered out.
+- **What browser they're using:** Is it a real browser, or does it identify itself as an automated scanner or bot? Known crawler signatures get served the clean page.
+- **Where the visitor is located:** Is the visitor on a residential internet connection in a targeted region? Data center IPs and VPN exit nodes may be excluded.
+- **Whether the visitor has been there before:** Repeat visits and returning visitors may be filtered out, which is why the site owner can visit their own site and see nothing wrong.
 
-This cloaking logic creates a structural advantage for the attacker. The same mechanism that hides the attack from the victim's security tools also hides it from every platform responsible for taking the attack down. VirusTotal, urlscan, Google Safe Browsing, and Cloudflare's abuse review all send automated systems to check the URL. Those systems don't match the trigger profile. They see the clean site. They report no finding. The attack continues.
+This creates a structural advantage for the attacker. The same filtering that hides the attack from potential victims who don't fit the target profile also hides it from every platform responsible for taking the attack down. VirusTotal, urlscan, Google Safe Browsing, and Cloudflare's abuse review all send automated systems to check the URL. Those systems don't look like real human visitors arriving from Google. They see the clean site. They report no finding. The attack continues.
 
 ---
 

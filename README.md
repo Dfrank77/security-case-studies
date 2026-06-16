@@ -9,7 +9,7 @@ Field writeups on real-world threat encounters and the disclosure pipeline.
 
 | Date | Title | Status |
 |------|-------|--------|
-| 2026-06 | [ClickFix encounter and disclosure pipeline failure](./clickfix-2026-06/) | Draft |
+| 2026-06 | [ClickFix encounter and disclosure pipeline failure](./clickfix-2026-06/) | Final |
 
 ## About
 
